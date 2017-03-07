@@ -1,0 +1,156 @@
+<!DOCTYPE html >
+<head>
+    <script
+            src="https://code.jquery.com/jquery-3.1.1.js"
+            integrity="sha256-16cdPddA6VdVInumRGo6IbivbERE8p7CQR3HzTBuELA="
+            crossorigin="anonymous"></script>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    <title>Using MySQL and PHP with Google Maps</title>
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+         * element that contains the map. */
+        #map {
+            height: 100%;
+        }
+        /* Optional: Makes the sample page fill the window. */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+<div id="map"></div>
+<script>
+    var customLabel = {
+        restaurant: {
+            label: 'R'
+        },
+        bar: {
+            label: 'B'
+        }
+    };
+    var customColor = {
+
+        restaurant: {
+            color: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+        },
+        bar: {
+            color: 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
+        }
+
+    };
+    var gmarkers = [];
+    var arrMarkers = []; //all markers
+    var bars=[];
+    var restor=[];
+    var  side_bar_html="";
+    function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+            center: new google.maps.LatLng(50.401699,30.2525107),
+            zoom: 5
+        });
+
+
+        var infoWindow = new google.maps.InfoWindow;
+        // Change this depending on the name of your PHP or XML file
+        downloadUrl('mapsData.php', function(data) {
+            var xml = data.responseXML;
+            var markers = xml.documentElement.getElementsByTagName('marker');
+            Array.prototype.forEach.call(markers, function(markerElem) {
+                var name = markerElem.getAttribute('name');
+                var address = markerElem.getAttribute('address');
+                var type = markerElem.getAttribute('type');
+                var point = new google.maps.LatLng(
+                        parseFloat(markerElem.getAttribute('lat')),
+                        parseFloat(markerElem.getAttribute('lng')));
+
+                var infowincontent = document.createElement('div');
+                var strong = document.createElement('strong');
+                strong.textContent = name;
+                infowincontent.appendChild(strong);
+                infowincontent.appendChild(document.createElement('br'));
+
+                var text = document.createElement('text');
+                text.textContent = address;
+                infowincontent.appendChild(text);
+                var icon = customLabel[type] || {};
+                var color =customColor[type] || {};
+                var marker = new google.maps.Marker({
+                    icon:color.color,
+                    map: map,
+                    position: point,
+                    label: icon.label
+                });
+
+               marker.addListener('click', function() {
+                    infoWindow.setContent(infowincontent);
+                    infoWindow.open(map, marker);
+                });
+                var label=marker.label;
+
+                arrMarkers[label]=marker;
+
+                if(label=='B'){
+                    bars.push(marker);
+                }else if(label=='R'){
+                   restor.push(marker);
+                }
+            });
+        });
+    }
+    // This function picks up the click and opens the corresponding info window
+    function myclick(i) {
+        google.maps.event.trigger(gmarkers[i], "click");
+    }
+    function toggleGroup(type) {
+        if(type=="R"){
+            var checkFlag=$("#restaurantCheckbox").prop('checked');
+            var i = 0, marker;
+
+            while (marker = restor[i++]) {
+                marker.setVisible(checkFlag); // maps API hide call
+            }
+        }
+        if(type=="B"){
+            var checkFlag=$("#barCheckbox").prop('checked');
+            var i = 0, marker;
+            while (marker = bars[i++]) {
+                marker.setVisible( checkFlag); // maps API hide call
+            }
+        }
+    }
+        function downloadUrl(url, callback) {
+            var request = window.ActiveXObject ?
+                    new ActiveXObject('Microsoft.XMLHTTP') :
+                    new XMLHttpRequest;
+
+            request.onreadystatechange = function () {
+                if (request.readyState == 4) {
+                    request.onreadystatechange = doNothing;
+                    callback(request, request.status);
+                }
+            };
+            request.open('GET', url, true);
+            request.send(null);
+        }
+        function doNothing() {
+        }
+
+
+</script>
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxmicwPoh8VNRJXTwGaLUdeb8lkr-eyK8&callback=initMap">
+</script>
+
+
+<div id="side_bar">
+    <input type="checkbox" checked id="restaurantCheckbox" onclick="toggleGroup('R')" />R<br>
+    <input type="checkbox" checked id="barCheckbox" onclick="toggleGroup('B')" />B<br>
+</div>
+
+</body>
+</html>
